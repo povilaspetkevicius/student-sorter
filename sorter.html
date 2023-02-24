@@ -74,7 +74,7 @@
         document.getElementById('inputForm').addEventListener("submit", (event) => {
             event.preventDefault();
             performSorting(event)
-            displayResults(event, applicationState)
+            displayResults(applicationState)
         }, false);
 
         function handleFileSelect(event) {
@@ -87,16 +87,34 @@
         function handleFileLoad(event) {
             const fileContent = event.target.result;
             fileToStudentArray(fileContent);
+            // validateStudents()
         }
 
         function fileToStudentArray(fileContent) {
-            applicationState.students = fileContent.split("\n").map(line => {
-                const lineValues = line.split(',');
-                return {
-                    'name': lineValues[0],
-                    'grade': lineValues[1]
-                };
-            });
+            try {
+                applicationState.students = fileContent.split("\n").map(line => {
+                    const lineValues = line.split(',');
+                    validateInput(lineValues)
+                    return {
+                        'name': lineValues[0],
+                        'grade': parseFloat(lineValues[1])
+                    };
+                })
+            } catch (error) {
+                prompt("Error occured while data was being loaded! Make sure file content meets form requirements.")
+                applicationState.students = []
+                applicationState.error = error
+            }
+        }
+
+        function validateInput(input) {
+            if (typeof input[0] !== "string") {
+                throw new Error(`student name is invalid: ${input[0]}`)
+            }
+            console.log(!isNaN(parseFloat(input[1])), typeof parseFloat(input[1]))
+            if (isNaN(parseFloat(input[1]))) {
+                throw new Error(`student grade is invalid: ${input[1]}`)
+            }
         }
 
         function timeExecution(givenFunction, functionInput) {
@@ -124,12 +142,12 @@
             }
         }
 
-        function displayResults(data, sortedResult) {
+        function displayResults(sortedResult) {
             const resultsDiv = document.getElementById("results");
             resultsDiv.innerHTML = "";
 
-            if (data.error) {
-                resultsDiv.innerHTML = `<p>Error: ${data.error}</p>`;
+            if (sortedResult.error) {
+                resultsDiv.innerHTML = `<p>${sortedResult.error}</p>`;
             } else if (sortedResult.isRequiredSortImplemented === false) {
                 resultsDiv.innerHTML = `<p>${sortedResult.sortName} sort not implemented!</p>`;
             } else {
