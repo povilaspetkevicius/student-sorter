@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Student Sorter</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 1em;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #4caf50;
+            color: white;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        input[type="submit"] {
+            background-color: #4caf50;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #3e8e41;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Student Sorter</h1>
+    <form id="inputForm">
+        <label for="file">Select a file:</label>
+        <input type="file" name="file" id="fileInput" />
+        <br />
+        <label for="algorithm">Select a sorting algorithm:</label>
+        <select name="algorithm" id="algorithm" selected="bubble">
+            <option value="bubble">Bubble Sort</option>
+            <option value="heap">Heap Sort</option>
+            <option value="merge">Merge Sort</option>
+        </select>
+        <br />
+        <input type="submit" value="Sort" />
+    </form>
+
+    <div id="results"></div>
+
+    <script type="module">
+        // if there will be more sorts implemented, they can be implemented in seperate files and imported as script uses modular import strategy.
+        import { sort as bubbleSort } from './bubbleSort.mjs'
+
+        let applicationState = {};
+
+        document.getElementById('fileInput').addEventListener("change", (event) => {
+            event.preventDefault();
+            handleFileSelect(event);
+        }, false);
+
+        document.getElementById('inputForm').addEventListener("submit", (event) => {
+            event.preventDefault();
+            performSorting(event)
+            displayResults(event, applicationState)
+        }, false);
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = handleFileLoad;
+            reader.readAsText(file);
+        }
+
+        function handleFileLoad(event) {
+            const fileContent = event.target.result;
+            fileToStudentArray(fileContent);
+        }
+
+        function fileToStudentArray(fileContent) {
+            applicationState.students = fileContent.split("\n").map(line => {
+                const lineValues = line.split(',');
+                return {
+                    'name': lineValues[0],
+                    'grade': lineValues[1]
+                };
+            });
+        }
+
+        function timeExecution(givenFunction, functionInput) {
+            const startTime = new Date();
+            const functionResult = givenFunction(functionInput)
+            const endTime = new Date();
+            return [functionResult, endTime - startTime]
+        }
+
+        function performSorting(data) {
+            applicationState.sortName = data.target.algorithm.value
+            switch (data.target.algorithm.value) {
+                case 'bubble': {
+                    const bubbleSortData = timeExecution(bubbleSort, applicationState.students)
+                    applicationState.isRequiredSortImplemented = true
+                    applicationState.sortedStudents = bubbleSortData[0]
+                    applicationState.executionTime = bubbleSortData[1]
+                    applicationState.inputSize = applicationState.students.length
+                    break;
+                }
+                default: {
+                    applicationState.isRequiredSortImplemented = false;
+                    break;
+                }
+            }
+        }
+
+        function displayResults(data, sortedResult) {
+            const resultsDiv = document.getElementById("results");
+            resultsDiv.innerHTML = "";
+
+            if (data.error) {
+                resultsDiv.innerHTML = `<p>Error: ${data.error}</p>`;
+            } else if (sortedResult.isRequiredSortImplemented === false) {
+                resultsDiv.innerHTML = `<p>${sortedResult.sortName} sort not implemented!</p>`;
+            } else {
+                const table = document.createElement("table");
+                const thead = document.createElement("thead");
+                const tbody = document.createElement("tbody");
+
+                const headers = ["Name", "Grade"];
+                const headerRow = document.createElement("tr");
+                headers.forEach((header) => {
+                    const th = document.createElement("th");
+                    th.textContent = header;
+                    headerRow.appendChild(th);
+                });
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+
+                sortedResult.sortedStudents.forEach((student) => {
+                    const row = document.createElement("tr");
+                    const nameCell = document.createElement("td");
+                    const gradeCell = document.createElement("td");
+                    nameCell.textContent = student.name;
+                    gradeCell.textContent = student.grade;
+                    row.appendChild(nameCell);
+                    row.appendChild(gradeCell);
+                    tbody.appendChild(row);
+                });
+
+                table.appendChild(tbody);
+                resultsDiv.appendChild(table);
+
+                const summary = document.createElement("p");
+                summary.textContent = `Sorted ${sortedResult.inputSize} students in ${sortedResult.executionTime}ms using ${sortedResult.sortName} sort.`;
+                resultsDiv.appendChild(summary);
+
+                const saveLink = document.createElement("a");
+                saveLink.href = "data:text/plain;charset=utf-8," + encodeURIComponent(
+                    sortedResult.sortedStudents.map((student) => `${student.name},${student.grade}`).join("\n")
+                );
+                saveLink.download = "sorted_students.txt";
+                saveLink.textContent = "Download sorted data as a text file";
+                resultsDiv.appendChild(saveLink);
+            }
+        }
+    </script>
+</body>
